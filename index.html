@@ -133,7 +133,8 @@
                         </div>
                         <div class="form-group">
                             <label>Quantidade Produzida (Total)</label>
-                            <input type="number" id="prod-qtd" min="0" required placeholder="Ex: 4500">
+                            <input type="number" id="prod-qtd" min="0" step="1000" inputmode="numeric" required placeholder="Ex: 45000">
+                            <span class="hint">Produção em múltiplos de mil</span>
                         </div>
                         <div class="form-group">
                             <label>Hora Extra (min)</label>
@@ -284,14 +285,15 @@
                             <input type="text" id="prod-nome" placeholder="Ex: SKU-X" required maxlength="40">
                         </div>
                         <div class="form-group">
-                            <label>Velocidade Nominal (pç/min)</label>
-                            <input type="number" id="prod-vel" min="0.01" step="0.1" placeholder="Ex: 20" required>
+                            <label>Velocidade Nominal (peças/hora)</label>
+                            <input type="number" id="prod-vel" min="1" step="1" inputmode="numeric" placeholder="Ex: 90000" required>
+                            <span class="hint">Capacidade da linha em peças por hora (ex: 90000 tubos/hora)</span>
                         </div>
                         <button type="submit" class="btn">Adicionar</button>
                     </form>
                     <div class="table-responsive" style="margin-top: 10px;">
                         <table id="table-produtos">
-                            <thead><tr><th>Produto</th><th>pç/min</th><th>Ações</th></tr></thead>
+                            <thead><tr><th>Produto</th><th>peças/hora</th><th>Ações</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -320,7 +322,7 @@
                 { id: "3", nome: "Turno C", minutos: 420 }
             ],
             produtos: [
-                { id: "1", nome: "Produto Padrão", velocidade: 20 }
+                { id: "1", nome: "Produto Padrão", velocidade: 1200 }
             ],
             // Estrutura: { id, data, turnoId, produtoId, qtd, horaExtra, abono, refugo }
             apontamentos: []
@@ -357,7 +359,7 @@
         }
 
         // ============ Cálculo de Eficiência ============
-        // A empresa entende como: "eu tinha X minutos disponíveis rodando a Y peças/min,
+        // A empresa entende como: "eu tinha X minutos disponíveis rodando a Y peças/hora,
         // o que não foi entregue daquela capacidade é ineficiência (parada)".
         // Hora extra soma ao tempo disponível, abono desconta. Descarte é um índice
         // separado (refugo / total produzido) e não entra na conta da eficiência.
@@ -366,16 +368,17 @@
             const prod = db.produtos.find(p => p.id === ap.produtoId);
             if (!turno || !prod) return null;
 
+            const velocidadeMin = prod.velocidade / 60; // peças/hora -> peças/min
             const horaExtra = ap.horaExtra || 0;
             const abono = Math.min(ap.abono || 0, turno.minutos + horaExtra);
             const tempoDisponivel = Math.max(turno.minutos + horaExtra - abono, 0);
-            const capacidadeTeorica = Math.round(tempoDisponivel * prod.velocidade);
+            const capacidadeTeorica = Math.round(tempoDisponivel * velocidadeMin);
 
             const refugo = Math.min(ap.refugo || 0, ap.qtd);
             const descarte = ap.qtd > 0 ? (refugo / ap.qtd) * 100 : 0;
 
             const eficiencia = capacidadeTeorica > 0 ? (ap.qtd / capacidadeTeorica) * 100 : 0;
-            const tempoNecessario = prod.velocidade > 0 ? ap.qtd / prod.velocidade : 0;
+            const tempoNecessario = velocidadeMin > 0 ? ap.qtd / velocidadeMin : 0;
             const paradaMin = Math.max(tempoDisponivel - tempoNecessario, 0);
 
             return {
@@ -441,7 +444,7 @@
             db.produtos.push({
                 id: Date.now().toString(),
                 nome: document.getElementById('prod-nome').value.trim(),
-                velocidade: parseFloat(document.getElementById('prod-vel').value)
+                velocidade: parseInt(document.getElementById('prod-vel').value)
             });
             document.getElementById('form-produto').reset();
             salvarDB();
@@ -466,7 +469,7 @@
 
             const tbProdutos = document.querySelector('#table-produtos tbody');
             tbProdutos.innerHTML = db.produtos.length ? db.produtos.map(p => `
-                <tr><td>${escapeHtml(p.nome)}</td><td>${p.velocidade}</td><td><button onclick="deletarProduto('${p.id}')" class="btn-action btn-delete">Remover</button></td></tr>
+                <tr><td>${escapeHtml(p.nome)}</td><td>${p.velocidade.toLocaleString()}</td><td><button onclick="deletarProduto('${p.id}')" class="btn-action btn-delete">Remover</button></td></tr>
             `).join('') : `<tr><td colspan="3" class="empty-state">Nenhum produto cadastrado</td></tr>`;
         }
 
