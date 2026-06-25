@@ -136,14 +136,19 @@
                             <input type="number" id="prod-qtd" min="0" required placeholder="Ex: 4500">
                         </div>
                         <div class="form-group">
-                            <label>Tempo de Parada (min)</label>
-                            <input type="number" id="prod-parada" min="0" value="0" placeholder="Ex: 30">
-                            <span class="hint">Paradas não planejadas durante o turno (afeta Disponibilidade)</span>
+                            <label>Hora Extra (min)</label>
+                            <input type="number" id="prod-horaextra" min="0" value="0" placeholder="Ex: 60">
+                            <span class="hint">Soma ao tempo disponível do turno</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Abono (min)</label>
+                            <input type="number" id="prod-abono" min="0" value="0" placeholder="Ex: 30">
+                            <span class="hint">Desconta do tempo disponível do turno</span>
                         </div>
                         <div class="form-group">
                             <label>Peças Refugadas</label>
                             <input type="number" id="prod-refugo" min="0" value="0" placeholder="Ex: 50">
-                            <span class="hint">Peças produzidas fora da especificação (afeta Qualidade)</span>
+                            <span class="hint">Índice de descarte, calculado separado da eficiência</span>
                         </div>
                         <button type="submit" id="btn-submeter" class="btn">Salvar Turno</button>
                         <button type="button" id="btn-cancelar-edit" class="btn btn-cancel" style="display:none;" onclick="cancelarEdicao()">Cancelar Edição</button>
@@ -156,9 +161,9 @@
                         <div class="kpi-value" id="kpi-dia-pecas">0</div>
                     </div>
                     <div class="card kpi-block">
-                        <div style="color: var(--text-muted); font-size: 0.8rem;">OEE do Dia</div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Eficiência do Dia</div>
                         <div class="kpi-value" id="kpi-dia-oee">0%</div>
-                        <div class="kpi-sub" id="kpi-dia-breakdown">D 0% · P 0% · Q 0%</div>
+                        <div class="kpi-sub" id="kpi-dia-breakdown">Parada 0min · Descarte 0%</div>
                     </div>
                 </div>
             </div>
@@ -171,7 +176,7 @@
                             <tr>
                                 <th>Turno / Produto</th>
                                 <th>Produção</th>
-                                <th>OEE</th>
+                                <th>Eficiência</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -194,14 +199,14 @@
 
                 <div class="grid-2">
                     <div class="card kpi-block">
-                        <div style="color: var(--text-muted); font-size: 0.8rem;">OEE Hoje</div>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">Eficiência Hoje</div>
                         <div class="kpi-value" id="rep-oee-hoje">0%</div>
-                        <div class="kpi-sub" id="rep-oee-hoje-breakdown">D 0% · P 0% · Q 0%</div>
+                        <div class="kpi-sub" id="rep-oee-hoje-breakdown">Parada 0min · Descarte 0%</div>
                     </div>
                     <div class="card kpi-block">
                         <div style="color: var(--text-muted); font-size: 0.8rem;">Média do Período</div>
                         <div class="kpi-value" id="rep-oee-periodo">0%</div>
-                        <div class="kpi-sub" id="rep-oee-periodo-breakdown">D 0% · P 0% · Q 0%</div>
+                        <div class="kpi-sub" id="rep-oee-periodo-breakdown">Parada 0min · Descarte 0%</div>
                     </div>
                 </div>
 
@@ -211,16 +216,16 @@
                 </div>
 
                 <div class="card">
-                    <h3>📈 Tendência de OEE</h3>
+                    <h3>📈 Tendência de Eficiência</h3>
                     <canvas id="chart-tendencia" style="width:100%; display:block;"></canvas>
-                    <p class="hint" style="margin-top:6px;">Linha verde pontilhada = meta de 85% (referência classe mundial)</p>
+                    <p class="hint" style="margin-top:6px;">Linha verde pontilhada = meta de 85%</p>
                 </div>
 
                 <div class="card">
-                    <h3>🚀 Melhores Turnos (Top OEE)</h3>
+                    <h3>🚀 Melhores Turnos (Top Eficiência)</h3>
                     <div class="table-responsive">
                         <table id="table-melhores">
-                            <thead><tr><th>Data</th><th>Turno / Produto</th><th>OEE</th></tr></thead>
+                            <thead><tr><th>Data</th><th>Turno / Produto</th><th>Eficiência</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -230,7 +235,7 @@
                     <h3>📊 Desempenho por Turno</h3>
                     <div class="table-responsive">
                         <table id="table-resumo-turno">
-                            <thead><tr><th>Turno</th><th>Peças Boas</th><th>OEE</th></tr></thead>
+                            <thead><tr><th>Turno</th><th>Peças</th><th>Eficiência</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -240,7 +245,7 @@
                     <h3>📦 Desempenho por Produto</h3>
                     <div class="table-responsive">
                         <table id="table-resumo-produto">
-                            <thead><tr><th>Produto</th><th>Peças Boas</th><th>OEE</th></tr></thead>
+                            <thead><tr><th>Produto</th><th>Peças</th><th>Eficiência</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -317,7 +322,7 @@
             produtos: [
                 { id: "1", nome: "Produto Padrão", velocidade: 20 }
             ],
-            // Estrutura: { id, data, turnoId, produtoId, qtd, paradaMin, refugo }
+            // Estrutura: { id, data, turnoId, produtoId, qtd, horaExtra, abono, refugo }
             apontamentos: []
         };
 
@@ -351,54 +356,50 @@
             if (viewId === 'relatorios') renderRelatorios();
         }
 
-        // ============ Cálculo de OEE (Disponibilidade x Performance x Qualidade) ============
+        // ============ Cálculo de Eficiência ============
+        // A empresa entende como: "eu tinha X minutos disponíveis rodando a Y peças/min,
+        // o que não foi entregue daquela capacidade é ineficiência (parada)".
+        // Hora extra soma ao tempo disponível, abono desconta. Descarte é um índice
+        // separado (refugo / total produzido) e não entra na conta da eficiência.
         function calcularDetalhes(ap) {
             const turno = db.turnos.find(t => t.id === ap.turnoId);
             const prod = db.produtos.find(p => p.id === ap.produtoId);
             if (!turno || !prod) return null;
 
-            const tempoDisponivel = turno.minutos;
-            const paradaMin = Math.min(ap.paradaMin || 0, tempoDisponivel);
-            const tempoOperando = tempoDisponivel - paradaMin;
-            const capacidadeTeorica = Math.round(tempoOperando * prod.velocidade);
-            const refugo = Math.min(ap.refugo || 0, ap.qtd);
-            const qtdBoa = ap.qtd - refugo;
+            const horaExtra = ap.horaExtra || 0;
+            const abono = Math.min(ap.abono || 0, turno.minutos + horaExtra);
+            const tempoDisponivel = Math.max(turno.minutos + horaExtra - abono, 0);
+            const capacidadeTeorica = Math.round(tempoDisponivel * prod.velocidade);
 
-            const disponibilidade = tempoDisponivel > 0 ? tempoOperando / tempoDisponivel : 0;
-            const performance = capacidadeTeorica > 0 ? ap.qtd / capacidadeTeorica : 0;
-            const qualidade = ap.qtd > 0 ? qtdBoa / ap.qtd : 0;
-            const oee = disponibilidade * performance * qualidade * 100;
+            const refugo = Math.min(ap.refugo || 0, ap.qtd);
+            const descarte = ap.qtd > 0 ? (refugo / ap.qtd) * 100 : 0;
+
+            const eficiencia = capacidadeTeorica > 0 ? (ap.qtd / capacidadeTeorica) * 100 : 0;
+            const tempoNecessario = prod.velocidade > 0 ? ap.qtd / prod.velocidade : 0;
+            const paradaMin = Math.max(tempoDisponivel - tempoNecessario, 0);
 
             return {
-                turno, prod, tempoDisponivel, paradaMin, tempoOperando, capacidadeTeorica,
-                refugo, qtdBoa,
-                disponibilidade: disponibilidade * 100,
-                performance: performance * 100,
-                qualidade: qualidade * 100,
-                oee
+                turno, prod, tempoDisponivel, capacidadeTeorica, horaExtra, abono,
+                refugo, descarte, paradaMin,
+                oee: eficiencia
             };
         }
 
         function calcularAgregado(lista) {
-            let somaDisponivel = 0, somaOperando = 0, somaCapTeorica = 0, somaProduzido = 0, somaBoas = 0;
+            let somaCapTeorica = 0, somaProduzido = 0, somaRefugo = 0, somaParada = 0;
             lista.forEach(ap => {
                 const det = calcularDetalhes(ap);
                 if (!det) return;
-                somaDisponivel += det.tempoDisponivel;
-                somaOperando += det.tempoOperando;
                 somaCapTeorica += det.capacidadeTeorica;
                 somaProduzido += ap.qtd;
-                somaBoas += det.qtdBoa;
+                somaRefugo += det.refugo;
+                somaParada += det.paradaMin;
             });
-            const disp = somaDisponivel > 0 ? somaOperando / somaDisponivel : 0;
-            const perf = somaCapTeorica > 0 ? somaProduzido / somaCapTeorica : 0;
-            const qual = somaProduzido > 0 ? somaBoas / somaProduzido : 0;
             return {
-                oee: disp * perf * qual * 100,
-                disponibilidade: disp * 100,
-                performance: perf * 100,
-                qualidade: qual * 100,
-                pecasBoas: somaBoas
+                oee: somaCapTeorica > 0 ? (somaProduzido / somaCapTeorica) * 100 : 0,
+                descarte: somaProduzido > 0 ? (somaRefugo / somaProduzido) * 100 : 0,
+                paradaMin: somaParada,
+                pecasBoas: somaProduzido - somaRefugo
             };
         }
 
@@ -409,7 +410,7 @@
         }
 
         function renderBreakdown(det) {
-            return `D ${det.disponibilidade.toFixed(0)}% · P ${det.performance.toFixed(0)}% · Q ${det.qualidade.toFixed(0)}%`;
+            return `Parada ${det.paradaMin.toFixed(0)}min · Descarte ${det.descarte.toFixed(1)}%`;
         }
 
         // ============ Configurações: Turnos e Produtos ============
@@ -517,7 +518,8 @@
             const turnoId = document.getElementById('prod-turno').value;
             const produtoId = document.getElementById('prod-produto').value;
             const qtd = parseInt(document.getElementById('prod-qtd').value);
-            const paradaMin = parseInt(document.getElementById('prod-parada').value) || 0;
+            const horaExtra = parseInt(document.getElementById('prod-horaextra').value) || 0;
+            const abono = parseInt(document.getElementById('prod-abono').value) || 0;
             const refugo = parseInt(document.getElementById('prod-refugo').value) || 0;
             const editId = document.getElementById('edit-id').value;
 
@@ -526,14 +528,14 @@
                 alert("Peças refugadas não podem ser maiores que a quantidade produzida.");
                 return;
             }
-            if (turno && paradaMin > turno.minutos) {
-                alert("Tempo de parada não pode ser maior que o tempo disponível do turno.");
+            if (turno && abono > turno.minutos + horaExtra) {
+                alert("Abono não pode ser maior que o tempo disponível do turno (já somada a hora extra).");
                 return;
             }
 
             if (editId) {
                 const index = db.apontamentos.findIndex(a => a.id === editId);
-                if (index !== -1) db.apontamentos[index] = { id: editId, data, turnoId, produtoId, qtd, paradaMin, refugo };
+                if (index !== -1) db.apontamentos[index] = { id: editId, data, turnoId, produtoId, qtd, horaExtra, abono, refugo };
                 cancelarEdicao();
             } else {
                 const existente = db.apontamentos.find(a => a.data === data && a.turnoId === turnoId);
@@ -541,11 +543,12 @@
                     if (!confirm("Já existe um lançamento para este turno nesta data. Deseja substituí-lo?")) return;
                     db.apontamentos = db.apontamentos.filter(a => a.id !== existente.id);
                 }
-                db.apontamentos.push({ id: Date.now().toString(), data, turnoId, produtoId, qtd, paradaMin, refugo });
+                db.apontamentos.push({ id: Date.now().toString(), data, turnoId, produtoId, qtd, horaExtra, abono, refugo });
             }
 
             document.getElementById('form-producao').reset();
-            document.getElementById('prod-parada').value = 0;
+            document.getElementById('prod-horaextra').value = 0;
+            document.getElementById('prod-abono').value = 0;
             document.getElementById('prod-refugo').value = 0;
             salvarDB();
         }
@@ -558,7 +561,8 @@
             document.getElementById('prod-turno').value = ap.turnoId;
             document.getElementById('prod-produto').value = ap.produtoId;
             document.getElementById('prod-qtd').value = ap.qtd;
-            document.getElementById('prod-parada').value = ap.paradaMin || 0;
+            document.getElementById('prod-horaextra').value = ap.horaExtra || 0;
+            document.getElementById('prod-abono').value = ap.abono || 0;
             document.getElementById('prod-refugo').value = ap.refugo || 0;
 
             document.getElementById('form-titulo').innerText = "✏️ Editar Lançamento";
@@ -571,7 +575,8 @@
         function cancelarEdicao() {
             document.getElementById('edit-id').value = '';
             document.getElementById('form-producao').reset();
-            document.getElementById('prod-parada').value = 0;
+            document.getElementById('prod-horaextra').value = 0;
+            document.getElementById('prod-abono').value = 0;
             document.getElementById('prod-refugo').value = 0;
             document.getElementById('form-titulo').innerText = "Inserir Produção do Turno";
             document.getElementById('btn-submeter').innerText = "Salvar Turno";
@@ -595,10 +600,13 @@
                 if (!det) return '';
                 const oeeArred = det.oee.toFixed(1);
                 const alerta = det.oee > 100 ? ' <span class="alerta-anomalia" title="Verifique a velocidade nominal cadastrada">⚠️</span>' : '';
+                const ajusteTempo = det.horaExtra || det.abono
+                    ? ` <span style="color:var(--text-muted)">(+${det.horaExtra}min extra / -${det.abono}min abono)</span>`
+                    : '';
                 return `
                     <tr>
                         <td><b>${escapeHtml(det.turno.nome)}</b><br><span style="color:var(--text-muted)">${escapeHtml(det.prod.nome)}</span></td>
-                        <td>Real: ${ap.qtd.toLocaleString()}<br><span style="color:var(--text-muted)">Refugo: ${det.refugo.toLocaleString()} · Parada: ${det.paradaMin}min</span></td>
+                        <td>Real: ${ap.qtd.toLocaleString()}<br><span style="color:var(--text-muted)">Refugo: ${det.refugo.toLocaleString()}</span>${ajusteTempo}</td>
                         <td><span class="badge-oee ${getOEEStyle(det.oee)}">${oeeArred}%</span>${alerta}<div class="oee-breakdown">${renderBreakdown(det)}</div></td>
                         <td>
                             <button onclick="iniciarEdicao('${ap.id}')" class="btn-action">Editar</button><br>
