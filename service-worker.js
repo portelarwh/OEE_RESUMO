@@ -1,4 +1,4 @@
-const CACHE_NAME = 'operix-oee-v1';
+const CACHE_NAME = 'operix-oee-v1.0.0';
 const APP_SHELL = [
   './',
   './index.html',
